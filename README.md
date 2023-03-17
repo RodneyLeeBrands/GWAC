@@ -32,7 +32,7 @@ GWACAMOLI is a script designed to automate the management of Google Workspace us
 2. Run the script:
 
     ```
-    python calendar_sharing_automation.py
+    python gwac.py
     ```
 
 The script will share the user's calendar with specific management groups based on their group membership and remove any calendar sharing that is not on the pre-set rules list.
