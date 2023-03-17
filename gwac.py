@@ -36,6 +36,17 @@ def share_calendar(service, user_email, target_email, role):
     except HttpError as error:
         print(f"An error occurred: {error}")
 
+def audit_and_remove_unlisted_sharing(calendar_service, user_email, pre_set_rules):
+    acl_list = calendar_service.acl().list(calendarId=user_email).execute()
+    items = acl_list.get("items", [])
+    for acl_entry in items:
+        if acl_entry.get("scope", {}).get("type") == "user":
+            sharing_email = acl_entry["scope"]["value"]
+            role = acl_entry["role"]
+            sharing_rule = (user_email, sharing_email, role)
+            if sharing_rule not in pre_set_rules:
+                calendar_service.acl().delete(calendarId=user_email, ruleId=acl_entry["id"]).execute()
+
 def process_sharing_rules(credentials, user_email, rules_sheet_id):
     service = build("admin", "directory_v1", credentials=credentials)
     calendar_service = build("calendar", "v3", credentials=credentials)
@@ -48,6 +59,9 @@ def process_sharing_rules(credentials, user_email, rules_sheet_id):
         for rule in rules:
             if group["email"] == rule[0]:
                 share_calendar(calendar_service, user_email, rule[1], rule[2])
+                pre_set_rules.add((user_email, rule[1], rule[2]))
+
+    audit_and_remove_unlisted_sharing(calendar_service, user_email, pre_set_rules)
 
 def main():
     parser = argparse.ArgumentParser(description="Google Workspace Automated Calendar Administration based on pre-set rules")
@@ -58,7 +72,8 @@ def main():
     args = parser.parse_args()
 
     credentials = get_credentials(args.key_file)
-    process_sharing_rules(credentials, args.user_email, args.rules_sheet_id)
+    pre_set_rules = set()
+    process_sharing_rules(credentials, args.user_email, args.rules_sheet_id, pre_set_rules)
 
 if __name__ == "__main__":
     main()
