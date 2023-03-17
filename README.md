@@ -1,6 +1,6 @@
-# GWACAMOLI: (or GWAC) Google Workspace Automated Calendar Administration and Management of Lists and Integration
+# GWACAMULI: (or GWAC) Google Workspace Automated Calendar Administration and Management Using Lists and Integration
 
-GWACAMOLI is a script designed to automate the management of Google Workspace users' calendar sharing based on pre-set rules stored in a Google Sheet. It shares the user's calendar with specific management groups according to their group membership and removes any calendar sharing that is not included in the pre-set rules list.
+GWACAMULI is a script designed to automate the management of Google Workspace users' calendar sharing based on pre-set rules stored in a Google Sheet. It shares the user's calendar with specific management groups according to their group membership and removes any calendar sharing that is not included in the pre-set rules list.
 
 ## Prerequisites
 
