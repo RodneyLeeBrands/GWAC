@@ -1,39 +1,107 @@
 # GWACAMULI: (or GWAC) Google Workspace Automated Calendar Administration and Management Using Lists and Integration
 
-GWACAMULI is a script designed to automate the management of Google Workspace users' calendar sharing based on pre-set rules stored in a Google Sheet. It shares the user's calendar with specific management groups according to their group membership and removes any calendar sharing that is not included in the pre-set rules list.
+GWACAMULI is a script designed to automate the management of Google Workspace calendars based on pre-set rules. It reads rules from a Google Sheet and shares calendars with specified groups or users, granting the appropriate permissions. The script also audits and removes any unlisted sharing permissions.
+
+## Features
+
+- Automatically share calendars based on rules from a Google Sheet
+- Support for a config.ini file to manage settings easily
+- Audit and remove unlisted sharing permissions
+- Print current calendar permissions before and after processing the rules
+
 
 ## Prerequisites
 
 1. You must have Python 3.6+ installed on your system.
-2. You need to have the `google-auth`, `google-auth-httplib2`, and `google-api-python-client` Python packages installed. You can install them using the following command:
+- A Google Workspace account with admin privileges
+- A Google Cloud Platform (GCP) project with the Calendar, Sheets, and Admin SDK APIs enabled
+- A Google service account with domain-wide delegation
+- A Google Sheet containing the calendar sharing rules
 
-    ```
-    pip install google-auth google-auth-httplib2 google-api-python-client
-    ```
 
-3. Enable the [Google Sheets API](https://developers.google.com/sheets/api/quickstart/python), [Google Calendar API](https://developers.google.com/calendar/quickstart/python), and [Admin SDK API](https://developers.google.com/admin-sdk/directory/v1/guides/prerequisites) for your Google Cloud project. Obtain service account JSON key files for each API and grant the necessary permissions:
+## Installation
 
-   - Google Sheets API: Read access to the Google Sheet containing the rules.
-   - Google Calendar API: Manage calendar sharing.
-   - Admin SDK API: Read access to the user's group membership.
+1. Clone the repository or download the source code.
+2. Install the required Python packages using the command:
 
-4. Replace the placeholder values in the script with the appropriate values, such as the path to the API credentials files, the Google Sheet ID, and the range containing the rules.
+```
+    pip install -r requirements.txt
+```
+3. Duplicate the `config_example.ini` file and name it `config.ini`.
+4. Open the `config.ini` file and update the fields with the appropriate values. (See Set up service account)
+
+## Service Account for Dummies
+
+The AI and I really struggled together with this part. We did our best to document our working steps (after about 15 wrong tries).
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Select or create a project
+3. Click on the hamburger menu (three horizontal lines) in the top left corner
+4. Navigate to APIs & Services > Dashboard
+5. Click on "+ ENABLE APIS AND SERVICES" at the top of the page
+6. Search for the following APIs and enable them for your project:
+   - Google Calendar API
+   - Google Sheets API
+   - Admin SDK API
+7. Navigate to APIs & Services > Credentials
+8. Click on "CREATE CREDENTIALS" at the top of the page and select "Service account"
+9. Fill in the required details for your service account and click "CREATE"
+10. Add the "Editor" role to your service account and click "CONTINUE"
+11. Click "DONE" to finish creating the service account
+12. Find the newly created service account in the list and click on the email address to view its details
+13. Click on "ADD KEY" and select "JSON"
+14. A JSON key file will be downloaded. Keep this file safe and secure, as it contains sensitive information
+
+Now, you need to delegate domain-wide authority to your service account:
+
+1. Log in to your Google Workspace admin account
+2. Navigate to Security > API controls
+3. Under "Domain-wide delegation", click on "MANAGE DOMAIN WIDE DELEGATION"
+4. Click on "Add new" and fill in the following details:
+   - Client ID: You can find this in the details of your service account on the Google Cloud Console
+   - OAuth Scopes: `https://www.googleapis.com/auth/admin.directory.group.readonly, https://www.googleapis.com/auth/admin.directory.user.readonly, https://www.googleapis.com/auth/calendar, https://www.googleapis.com/auth/spreadsheets.readonly`
+5. Click "Authorize" to finish setting up domain-wide delegation
+
+Finally, update the `config.ini` file with the required information:
+
+1. Duplicate the `config_example.ini` as `config.ini` in the same directory
+2. Update the `key_file` field with the path to the JSON key file you downloaded earlier
+3. Update the `subject` field with the email address of the admin account your service account is impersonating
+4. Update the `rules_sheet_id` field with the ID of the Google Sheet containing the pre-set rules
+5. Update the `sheet_range` field with the range in the format 'SheetName!A1:C' that contains the pre-set rules
+
+Now you're ready to run the script!
+
+## Rules Sheet Format
+
+The rules sheet should contain three columns:
+
+1. "User Group Email": The email address of the group the user is a part of.
+2. "Management Group Email": The email address of the group or user the calendar will be shared with.
+3. "Permission": The permission level assigned to the management group or user. Valid options include "writer", "reader", and "freeBusyReader". Using "owner" here will cause an error as you can not change the primary owner of a personal calendar.
+
+Example:
+
+User Group Email	Management Group Email	Permission
+group1@example.com	managerGroup1@example.com	writer
+group2@example.com	managerGroup2@example.com	reader
+group3@example.com	managerGroup3@example.com	freeBusyReader
+Make sure to update the sheet_range in the config.ini file to match the actual range of your rules sheet.
 
 ## Usage
 
-1. Update the `user_email` variable in the script with the email address of the user whose calendar you want to manage:
+Run the script:
 
-    ```python
-    if __name__ == "__main__":
-        user_email = "user@example.com"
-        main(user_email)
+    ```shell
+    python gwac.py --user-email user@example.com
     ```
 
-2. Run the script:
+This script accepts the following optional arguments:
 
-    ```
-    python gwac.py
-    ```
+- --key-file: Path to the service account key file (in JSON format). Defaults to the value set in config.ini.
+- --subject: Subject for the service account. Defaults to the value set in config.ini.
+- --rules-sheet-id: ID of the Google Sheet containing the pre-set rules. Defaults to the value set in config.ini.
+- --sheet-range: Sheet range in the format 'SheetName!A1:C' that contains the pre-set rules. Defaults to the value set in config.ini.  
 
 The script will share the user's calendar with specific management groups based on their group membership and remove any calendar sharing that is not on the pre-set rules list.
 
