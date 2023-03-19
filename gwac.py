@@ -33,8 +33,9 @@ def get_rules(service, sheet_id, sheet_range):
         rules.append((row[0], row[1], row[2]))
     return rules
 
-def share_calendar(service, user_email, target_email, role, target_type="group"):
+def share_calendar(admin_service, service, user_email, target_email, role, dry_run=False):
     try:
+
         # Get the ACL of the user_email's calendar
         acl_list = service.acl().list(calendarId=user_email).execute()
         items = acl_list.get("items", [])
@@ -45,9 +46,17 @@ def share_calendar(service, user_email, target_email, role, target_type="group")
             scope_type = acl_entry.get("scope", {}).get("type")
             scope_value = acl_entry.get("scope", {}).get("value")
 
-            if scope_type == target_type and scope_value == target_email:
+            if scope_value == target_email:
                 existing_calendar_entry = acl_entry
                 break
+
+        # Determine if the target_email is a user or a group
+        target_type = "user"
+        try:
+            admin_service.groups().get(groupKey=target_email).execute()
+            target_type = "group"
+        except HttpError:
+            pass
 
         acl = {
             "role": role,
@@ -59,21 +68,31 @@ def share_calendar(service, user_email, target_email, role, target_type="group")
 
         # If target_email doesn't have access or has a different role, update or add the ACL entry
         if existing_calendar_entry is None:
-            print(f"\033[32mSharing {user_email}'s calendar with {target_email} as {role}\033[0m")
-            service.acl().insert(calendarId=user_email, body=acl).execute()
+            if dry_run:
+                print(f"\033[32m[DRY RUN] Sharing {user_email}'s calendar with {target_email} as {role}\033[0m")
+            else:
+                print(f"\033[32mSharing {user_email}'s calendar with {target_email} as {role}\033[0m")
+                service.acl().insert(calendarId=user_email, body=acl).execute()
         elif existing_calendar_entry["role"] != role:
-            print(f"\033[33mUpdating {target_email}'s access to {user_email}'s calendar from {existing_calendar_entry['role']} to {role}\033[0m")
-            rule_id = f"{target_type}:{target_email}"
-            service.acl().update(calendarId=user_email, ruleId=rule_id, body=acl).execute()
+            if dry_run:
+                print(f"\033[32m[DRY RUN] Updating {target_email}'s access to {user_email}'s calendar from {existing_calendar_entry['role']} to {role}\033[0m")
+            else:
+                print(f"\033[33mUpdating {target_email}'s access to {user_email}'s calendar from {existing_calendar_entry['role']} to {role}\033[0m")
+                rule_id = f"{target_type}:{target_email}"
+                service.acl().update(calendarId=user_email, ruleId=rule_id, body=acl).execute()
         else:
-            print(f"\033[33m{target_email} already has {role} access to {user_email}'s calendar\033[0m")
+            if dry_run:
+                print(f"\033[32m[DRY RUN] {target_email} already has {role} access to {user_email}'s calendar\033[0m")
+            else:
+                print(f"\033[33m{target_email} already has {role} access to {user_email}'s calendar\033[0m")
 
     except HttpError as error:
         print(f"\033[31mAn error occurred while sharing or updating the calendar: {error}\033[0m")
 
 
 
-def audit_and_remove_unlisted_sharing(calendar_service, user_email, pre_set_rules):
+
+def audit_and_remove_unlisted_sharing(calendar_service, user_email, pre_set_rules, dry_run=False):
     acl_list = calendar_service.acl().list(calendarId=user_email).execute()
     items = acl_list.get("items", [])
     for acl_entry in items:
@@ -85,19 +104,24 @@ def audit_and_remove_unlisted_sharing(calendar_service, user_email, pre_set_rule
             if sharing_rule not in pre_set_rules:
                 # Add this condition to check if the user is not the primary owner
                 if acl_entry["role"] != "owner" or sharing_email != user_email:
-                    calendar_service.acl().delete(calendarId=user_email, ruleId=acl_entry["id"]).execute()
-                    cprint(f"Removed {sharing_email} from {user_email} calendar", 'red')
+                    if dry_run:
+                        cprint(f"\033[32m[DRY RUN] Removed {sharing_email} from {user_email} calendar\033[0m", 'red')
+                    else:
+                        calendar_service.acl().delete(calendarId=user_email, ruleId=acl_entry["id"]).execute()
+                        cprint(f"Removed {sharing_email} from {user_email} calendar", 'red')
 
-
-def process_sharing_rules(credentials, user_email, rules_sheet_id, sheet_range, pre_set_rules):
-    service = build("admin", "directory_v1", credentials=credentials)
+def process_sharing_rules(credentials, user_email, rules_sheet_id, sheet_range, pre_set_rules, dry_run=False):
+    if(dry_run):
+        print("Dry Run mode enabled")
+    
+    admin_service = build("admin", "directory_v1", credentials=credentials)
     calendar_service = build("calendar", "v3", credentials=credentials)
     sheets_service = build("sheets", "v4", credentials=credentials)
 
     #show existing calendar permissions
     print_calendar_permissions(calendar_service, user_email)
 
-    user_groups = get_user_groups(service, user_email)
+    user_groups = get_user_groups(admin_service, user_email)
     cprint(f"Found {len(user_groups)} group(s) for {user_email}", "blue")
     rules = get_rules(sheets_service, rules_sheet_id, sheet_range)
     cprint(f"Found {len(rules)} rule(s) in the Google Sheet", "blue")
@@ -111,15 +135,15 @@ def process_sharing_rules(credentials, user_email, rules_sheet_id, sheet_range, 
             if group["email"] == rule[0] and rule[1] != user_email:
                 try:
                     # Share the user's calendar with the Managment Group Email (rule[1]) and grant the specified permission (rule[2])
-                    share_calendar(calendar_service, user_email, rule[1], rule[2], target_type="group")
-                    #print(f"\033[32mShared {user_email}'s calendar with {rule[1]} as {rule[2]}\033[0m")
+                    share_calendar(admin_service, calendar_service, user_email, rule[1], rule[2], dry_run=dry_run)
                     # Add this sharing rule to the pre_set_rules set for later use in the audit_and_remove_unlisted_sharing function
                     pre_set_rules.add((user_email, rule[1], rule[2]))
                 except HttpError as error:
                     print(f"\033[31mAn error occurred while sharing the calendar: {error}\033[0m")
     
-    audit_and_remove_unlisted_sharing(calendar_service, user_email, pre_set_rules)
-    print_calendar_permissions(calendar_service, user_email)  # Add this line
+    audit_and_remove_unlisted_sharing(calendar_service, user_email, pre_set_rules, dry_run=dry_run)
+    if dry_run==False:
+        print_calendar_permissions(calendar_service, user_email)
 
 def print_calendar_permissions(service, user_email):
     try:
@@ -157,12 +181,15 @@ def main():
     parser.add_argument("--user-email", help="Email address of the user to manage", required=True)
     parser.add_argument("--rules-sheet-id", help="ID of the Google Sheet containing the pre-set rules", default=gwac_config.get("rules_sheet_id"))
     parser.add_argument("--sheet-range", help="Sheet range in the format 'SheetName!A1:C' that contains the pre-set rules", default=gwac_config.get("sheet_range"))
+    parser.add_argument("--dry-run", help="Enable dry run mode to list proposed changes without actually performing them", action="store_true")
+
 
     args = parser.parse_args()
 
     credentials = get_credentials(args.key_file, args.subject)
     pre_set_rules = set()
-    process_sharing_rules(credentials, args.user_email, args.rules_sheet_id, args.sheet_range, pre_set_rules)
+
+    process_sharing_rules(credentials, args.user_email, args.rules_sheet_id, args.sheet_range, pre_set_rules, dry_run=args.dry_run)
 
     cprint("The Gwac is done! 🥑", "cyan")
 

@@ -102,8 +102,13 @@ This script accepts the following optional arguments:
 - --subject: Subject for the service account. Defaults to the value set in config.ini.
 - --rules-sheet-id: ID of the Google Sheet containing the pre-set rules. Defaults to the value set in config.ini.
 - --sheet-range: Sheet range in the format 'SheetName!A1:C' that contains the pre-set rules. Defaults to the value set in config.ini.  
+- --dry-run: Allows you to see what changes the script would make without acutally applying them.
 
 The script will share the user's calendar with specific management groups based on their group membership and remove any calendar sharing that is not on the pre-set rules list.
+
+### Dry Run Mode
+
+By including the `--dry-run` option when running the script, you can see the proposed changes without actually making any modifications to the calendar sharing settings. This mode is useful for testing the script and ensuring that your sharing rules are set up correctly before applying them to your calendars.
 
 ## Pre-set Rules Format
 
