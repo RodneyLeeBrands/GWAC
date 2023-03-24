@@ -175,3 +175,27 @@ The process of writing this README, including the section you are reading now, d
 
 The collaboration with ChatGPT-4 enabled me to overcome previous struggles and build a complete script that achieves the desired functionality. This interactive development process showcases the potential of AI-assisted programming, providing an efficient way to learn, generate code, and create documentation.
 
+## User Stories
+What's the point of this anyways?!
+
+### User Story 1:
+As a Google Workspace Admin, I want to automate the process of sharing new employees' calendars with their superiors, team members, and receptionist employees/admin assistants based on their group memberships.
+
+When a new employee, Jane, joins the company as a designer, I add her email address to the appropriate Google Groups. The GWAC script is set up with predefined sharing rules that include the designer group, the lead designer group, and the concierge group. After running the GWAC script, Jane's calendar is shared with the lead designer with write access, allowing them to add events to her calendar. Additionally, Jane's calendar is shared with the concierge group with read-only access, enabling them to view her calendar and place calls to customers reminding them of upcoming meetings. This automation saves me time and ensures consistent calendar sharing across the organization.
+
+### User Story 2:
+As a Google Workspace Admin, I want to ensure that team leads have write access to their team members' calendars based on group memberships so that they can efficiently manage their teams' schedules.
+
+When a new team member, John, joins a team, I add him to the relevant Google Groups. The GWAC script contains predefined sharing rules based on these groups, which automatically grant the team lead write access to John's calendar once the script is run. This automated process helps me maintain consistent access permissions across the organization and saves time on manual calendar sharing tasks.
+
+### User Story 3:
+As a Google Workspace Admin, I want to grant read-only access to department-specific admin assistants for all employees' calendars within their assigned departments based on group memberships, ensuring efficient schedule management.
+
+The GWAC script is configured with sharing rules that grant read-only access to the calendars of employees within specific departments, based on their group memberships. Whenever a new employee joins the department or an existing employee's group membership is updated, running the GWAC script ensures that the admin assistants have the appropriate level of access to their calendars. This streamlines my workflow as a Google Workspace Admin and allows me to efficiently manage calendar sharing across the organization.
+
+### User Story 4:
+As a Google Workspace Admin, I want to efficiently manage calendar sharing when an employee gets promoted, ensuring that their calendar is shared with their new supervisor and no longer shared with their previous supervisor based on their updated group memberships.
+
+When an employee, Mark, receives a promotion, his group memberships change to reflect his new position within the company. I update his group memberships accordingly in Google Workspace. The GWAC script is set up with predefined sharing rules based on the employees' group memberships, both for granting and revoking access to calendars.
+
+After running the GWAC script, Mark's calendar is automatically shared with his new supervisor, granting them the appropriate level of access. At the same time, the script ensures that Mark's previous supervisor no longer has access to his calendar as it is no longer relevant to their role. This automation simplifies my role as a Google Workspace Admin and ensures consistent calendar sharing across the organization while respecting employee promotions and position changes.
